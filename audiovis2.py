@@ -1,3 +1,11 @@
+# audiovis2.py
+# Created by Jack Tobia
+# February 2025
+#
+# Takes a WAV file and visualizes the audio with bars representing different
+# audio frequencies.
+
+
 import numpy as np
 import pygame
 import wave
@@ -8,13 +16,13 @@ import matplotlib.animation as animation
 pygame.init()
 pygame.mixer.init()
 
+# Plays the audio file using pygame.
 def play_audio(audio_file):
-    """Plays the audio file using pygame."""
     pygame.mixer.music.load(audio_file)
     pygame.mixer.music.play()
 
+# Reads WAV file and returns normalized audio data and frame rate.
 def read_wav(audio_file):
-    """Reads WAV file and returns normalized audio data and frame rate."""
     with wave.open(audio_file, 'rb') as wav:
         params = wav.getparams()
         num_channels, sample_width, frame_rate, num_frames, _, _ = params
@@ -30,15 +38,18 @@ def read_wav(audio_file):
 
     return data, frame_rate
 
+# Calculates the frequency spectrum using FFT.
 def calculate_spectrum(data, chunk_size):
-    """Calculates the frequency spectrum using FFT."""
-    # Apply FFT to the audio data and take the magnitude of the result
-    spectrum = np.abs(np.fft.fft(data))[:chunk_size//2]  # Only use the first half of the spectrum
-    spectrum = spectrum / np.max(spectrum)  # Normalize the spectrum
+    # Apply FFT to the audio data and take the magnitude of the result, and
+    # only use the first half of the spectrum
+    spectrum = np.abs(np.fft.fft(data))[:chunk_size//2]
+    # Normalize the spectrum
+    spectrum = spectrum / np.max(spectrum)
+
     return spectrum
 
+# Splits the spectrum into defined frequency bands between low_freq and high_freq.
 def split_spectrum(spectrum, frame_rate, bands, low_freq=20, high_freq=20000):
-    """Splits the spectrum into defined frequency bands between low_freq and high_freq."""
     # Calculate the frequency bin width (Hz per bin)
     bin_width = frame_rate / len(spectrum)
 
@@ -56,15 +67,19 @@ def split_spectrum(spectrum, frame_rate, bands, low_freq=20, high_freq=20000):
 
     return band_heights
 
+# Updates the bar heights dynamically based on audio spectrum.
 def update_bars(frame, bars, data, frame_rate, chunk_size, start_time, bands, low_freq, high_freq):
-    """Updates the bar heights dynamically based on audio spectrum."""
-    elapsed_time = pygame.mixer.music.get_pos() / 1000.0  # Time in seconds
-    current_frame = int(elapsed_time * frame_rate)  # Convert seconds to samples
-    start = max(current_frame - chunk_size, 0)  # Keep within bounds
+    # Time in seconds
+    elapsed_time = pygame.mixer.music.get_pos() / 1000.0
+    # Convert seconds to samples
+    current_frame = int(elapsed_time * frame_rate)
+    # Keep within bounds
+    start = max(current_frame - chunk_size, 0)
     end = start + chunk_size
 
+    # Stop updating when data ends
     if end > len(data):
-        return bars  # Stop updating when data ends
+        return bars
 
     # Get the spectrum for this chunk of data
     spectrum = calculate_spectrum(data[start:end], chunk_size)
@@ -74,21 +89,25 @@ def update_bars(frame, bars, data, frame_rate, chunk_size, start_time, bands, lo
 
     # Update the bar heights
     for i, bar in enumerate(bars):
-        bar.set_height(band_heights[i] * 10)  # Scale by 10 for better visibility
+        # Scale by 10 for better visibility
+        bar.set_height(band_heights[i] * 10)
 
     return bars
 
+# Animates the bars in response to audio spectrum.
 def visualize_audio(audio_file, bands=50, low_freq=20, high_freq=20000):
-    """Animates the bars in response to audio spectrum."""
     data, frame_rate = read_wav(audio_file)
-    chunk_size = 2048  # Number of samples per update for smoother visual
+    # Number of samples per update for smoother visual
+    chunk_size = 2048
 
     # Set up the figure and axes
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.bar(np.arange(bands), np.zeros(bands), color='cyan', width=0.8)
 
-    ax.set_ylim(0, 7)  # Adjust to fit the max bar height
-    ax.set_xlim(-0.5, bands - 0.5)  # Align with the frequency bands
+    # Adjust to fit the max bar height
+    ax.set_ylim(0, 7)
+    # Align with the frequency bands
+    ax.set_xlim(-0.5, bands - 0.5)
 
     # Adjust the x-axis labels to display frequency ranges
     ax.set_xticks(np.arange(bands))
@@ -107,4 +126,5 @@ def visualize_audio(audio_file, bands=50, low_freq=20, high_freq=20000):
 
 # Run the visualization
 if __name__ == "__main__":
-    visualize_audio("Atlantis.wav")  # Replace with your audio file path
+    # Replace with your audio file path
+    visualize_audio("Atlantis.wav")
